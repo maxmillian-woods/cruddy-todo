@@ -8,25 +8,51 @@ var items = {};
 // Public API - Fix these CRUD functions ///////////////////////////////////////
 
 exports.create = (text, callback) => {
-  var id = counter.getNextUniqueId();
-  items[id] = text;
-  callback(null, { id, text });
+  counter.getNextUniqueId((err, data) => {
+    fs.writeFile(path.join(exports.dataDir, `${data}-${text}.txt`), text, (err) => {
+      if (err) {
+        callback(new Error('No item with id'));
+      } else {
+        callback(null, {
+          id: data,
+          text: text
+        });
+      }
+    });
+  });
 };
 
 exports.readAll = (callback) => {
-  var data = _.map(items, (text, id) => {
-    return { id, text };
+  fs.readdir(path.join(__dirname, 'data'), (err, files) => {
+    if (err) {
+      throw err;
+    }
+    var data = _.map(files, (text, id) => {
+      return {
+        id,
+        text
+      };
+    });
+    callback(null, data);
   });
-  callback(null, data);
 };
 
 exports.readOne = (id, callback) => {
-  var text = items[id];
-  if (!text) {
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    callback(null, { id, text });
-  }
+  fs.readdir(path.join(__dirname, 'data'), (err, files) => {
+    if (err) {
+      throw err;
+    }
+    _.map(files, (text, id) => {
+      if (!text) {
+        callback(new Error(`No item with id: ${id}`));
+      } else {
+        callback(null, {
+          id,
+          text
+        });
+      }
+    });
+  });
 };
 
 exports.update = (id, text, callback) => {
@@ -35,7 +61,10 @@ exports.update = (id, text, callback) => {
     callback(new Error(`No item with id: ${id}`));
   } else {
     items[id] = text;
-    callback(null, { id, text });
+    callback(null, {
+      id,
+      text
+    });
   }
 };
 
