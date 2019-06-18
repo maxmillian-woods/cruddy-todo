@@ -38,7 +38,7 @@ exports.readAll = (callback) => {
 };
 
 exports.readOne = (id, callback) => {
-  fs.readFile(path.join(exports.dataDir, `${id}.txt`), (err, data) => {
+  fs.readFile(path.join(exports.dataDir, `${id - 1}.txt`), (err, data) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
     } else {
@@ -78,6 +78,17 @@ exports.delete = (id, callback) => {
         if (err) {
           throw err;
         } else {
+          fs.readFile(path.join(__dirname, 'counter.txt'), (err, data) => {
+            if (err) {
+              throw err;
+            } else {
+              fs.writeFile(path.join(__dirname, 'counter.txt'), data - 1, (err) => {
+                if (err) {
+                  throw err;
+                }
+              });
+            }
+          });
           callback();
         }
       });
