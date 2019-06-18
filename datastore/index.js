@@ -2,6 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('underscore');
 const counter = require('./counter');
+const readdir = require('fs-readdir-promise');
+const readFilePromise = require('fs-readfile-promise');
+const Promise = require('bluebird');
+const pfs = Promise.promisifyAll(fs);
+
 
 var items = {};
 
@@ -9,7 +14,7 @@ var items = {};
 
 exports.create = (text, callback) => {
   counter.getNextUniqueId((err, data) => {
-    fs.writeFile(path.join(exports.dataDir, `${data - 1}.txt`), text, (err) => {
+    fs.writeFile(path.join(exports.dataDir, `${data}.txt`), text, (err) => {
       if (err) {
         callback(new Error('No item with id'));
       } else {
@@ -23,29 +28,53 @@ exports.create = (text, callback) => {
 };
 
 exports.readAll = (callback) => {
-  fs.readdir(path.join(__dirname, 'data'), (err, files) => {
-    if (err) {
-      throw err;
-    }
-    var data = _.map(files, (text, id) => {
-      return {
-        id,
-        text
-      };
+  return pfs.readdirAsync(exports.dataDir)
+    .then((files) => {
+      var todos = files.map((file) => {
+        var id = file.slice(0, 5);
+        return pfs.readFileAsync(path.join(exports.dataDir, file), 'utf8')
+          .then((text) => {
+            return {id, text};
+          });
+      });
+      Promise.all(todos).then((todos) => {
+        callback(null, todos);
+      });
+    })
+    .catch((err) => {
+      callback(err);
     });
-    callback(null, data);
-  });
+  // readdir(exports.dataDir)
+  //   .then((files) => {
+  //     var todos = files.map((file) => {
+  //       console.log(file)
+  //       var id = file.toString().slice(0, 5);
+  //       console.log(id);
+  //       (async () => {
+  //         await readFilePromise(path.join(exports.dataDir, file), 'utf8')
+  //         .then((text) => {
+  //           return {
+  //             id: id,
+  //             text: text
+  //           };
+  //         });
+  //       })()
+  //     });
+  //     Promise.all(todos).then((todos) => {
+  //       callback(null, todos);
+  //     });
+  //   })
+  //   .catch((err) => {
+  //     callback(err);
+  //   });
 };
 
 exports.readOne = (id, callback) => {
-  fs.readFile(path.join(exports.dataDir, `${id - 1}.txt`), (err, data) => {
+  fs.readFile(path.join(exports.dataDir, `${id}.txt`), 'utf8', (err, data) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
     } else {
-      callback(null, {
-        id: id,
-        text: data
-      });
+      callback(null, {id: id, text: data});
     }
   });
 };
